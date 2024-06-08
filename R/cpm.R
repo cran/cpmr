@@ -17,10 +17,12 @@
 #' @param conmat A matrix of connectome data. Observations in row, edges in
 #'   column (assumed that duplicated edges are removed).
 #' @param behav A numeric vector contains behavior data. Length must equal to
-#'   number of observations in `conmat`.
+#'   number of observations in `conmat`. Note `behav` could also be a row/column
+#'   matrix, which will be converted to a vector using [drop()].
 #' @param ... For future extension. Currently ignored.
 #' @param confounds A matrix of confounding variables. Observations in row,
-#'   variables in column. If `NULL`, no confounding variables are used.
+#'   variables in column. If `NULL`, no confounding variables are used. Note if
+#'   a vector is provided, it will be converted to a column matrix.
 #' @param thresh_method,thresh_level The threshold method and level used in edge
 #'   selection. If method is set to be `"alpha"`, the edge selection is based on
 #'   the critical value of correlation coefficient. If method is set to be
@@ -78,32 +80,21 @@ cpm <- function(conmat, behav, ...,
   call <- match.call()
   thresh_method <- match.arg(thresh_method)
   return_edges <- match.arg(return_edges)
-  # check if rownames of conmat and names of behav match if both are not NULL
-  if (!is.null(rownames(conmat)) && !is.null(names(behav))) {
-    # nocov start
-    stopifnot(
-      "Row names of `conmat` and names of `behav` do not match." =
-        identical(rownames(conmat), names(behav))
-    )
-    # nocov end
+  # ensure `behav` is a vector
+  behav <- drop(behav)
+  if (!is.vector(behav) || !is.numeric(behav)) {
+    stop("Behavior data must be a numeric vector.")
   }
+  if (nrow(conmat) != length(behav)) {
+    stop("Case numbers of `conmat` and `behav` must match.")
+  }
+  check_names(conmat, behav)
   if (!is.null(confounds)) {
-    # nocov start
-    if (!is.null(rownames(confounds))) {
-      if (!is.null(rownames(conmat))) {
-        stopifnot(
-          "Row names of `conmat` and names of `confounds` do not match." =
-            identical(rownames(conmat), rownames(confounds))
-        )
-      }
-      if (!is.null(names(behav))) {
-        stopifnot(
-          "Names of `behav` and names of `confounds` do not match." =
-            identical(names(behav), rownames(confounds))
-        )
-      }
+    if (is.vector(confounds)) confounds <- as.matrix(confounds)
+    if (nrow(confounds) != length(behav)) {
+      stop("Case numbers of `confounds` and `behav` must match.")
     }
-    # nocov end
+    check_names(confounds, behav)
     conmat <- regress_counfounds(conmat, confounds)
     behav <- regress_counfounds(behav, confounds)
   }
@@ -159,7 +150,32 @@ cpm <- function(conmat, behav, ...,
   )
 }
 
+#' @export
+print.cpm <- function(x, ...) {
+  cv <- if (length(unique(x$folds)) == length(x$real)) {
+    "leave-one-out"
+  } else {
+    sprintf("%d-fold", length(unique(x$folds)))
+  }
+  cat(sprintf("CPM results based on %s cross validation.\n", cv))
+  invisible(x)
+}
+
 # helper functions
+check_names <- function(data, behav) {
+  if (!is.null(rownames(data)) && !is.null(names(behav))) {
+    if (!identical(rownames(data), names(behav))) {
+      stop(
+        sprintf(
+          "Case names of `%s` must match those of behavior data.",
+          deparse1(substitute(data))
+        )
+      )
+    }
+  }
+  invisible()
+}
+
 select_edges <- function(conmat, behav, method, level) {
   r_mat <- stats::cor(conmat, behav)
   r_crit <- switch(method,
@@ -232,4 +248,18 @@ predict_cpm <- function(conmat, behav, conmat_new, edges, bias_correct) {
 
 regress_counfounds <- function(resp, confounds) {
   stats::.lm.fit(cbind(1, confounds), resp)$residuals
+}
+
+critical_r <- function(n, alpha) {
+  df <- n - 2
+  ct <- stats::qt(alpha / 2, df, lower.tail = FALSE)
+  sqrt((ct^2) / ((ct^2) + df))
+}
+
+crossv_kfold <- function(n, k) {
+  sample(cut(seq_len(n), breaks = k, labels = FALSE))
+}
+
+fscale <- function(x, center, scale) {
+  eachrow(eachrow(x, center, "-"), scale, "/")
 }

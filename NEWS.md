@@ -1,3 +1,13 @@
+# cpmr 0.0.9
+
+## New features
+
+* Added support for row/column matrix as input for behavior and confounds data.
+
+## Maintenance
+
+* Added more data checks to ensure the input data are in the correct format.
+
 # cpmr 0.0.8
 
 * Added `return_edges` argument to optionally set how to return edges in the output.

@@ -8,6 +8,8 @@
 [![R-CMD-check](https://github.com/psychelzh/cpmr/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/psychelzh/cpmr/actions/workflows/R-CMD-check.yaml)
 [![Codecov test
 coverage](https://codecov.io/gh/psychelzh/cpmr/branch/main/graph/badge.svg)](https://app.codecov.io/gh/psychelzh/cpmr?branch=main)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/cpmr)](https://CRAN.R-project.org/package=cpmr)
 <!-- badges: end -->
 
 The cpmr package is specifically designed for the analysis of the
@@ -17,19 +19,18 @@ calculation.
 
 ## Installation
 
-You can install the development version of cpmr from
-[GitHub](https://github.com/) with:
+You can install the released version of cpmr from
+[CRAN](https://CRAN.R-project.org) with:
 
 ``` r
-# install.packages("devtools")
-devtools::install_github("psychelzh/cpmr")
+install.packages("cpmr")
 ```
 
-Or you can install cpmr from
+Or you can install the development version of cpmr from
 [r-universe](https://psychelzh.r-universe.dev) with:
 
 ``` r
-install.packages("cpmr", repos = c(getOption("repos"), "https://psychelzh.r-universe.dev"))
+install.packages("cpmr", repos = c("https://psychelzh.r-universe.dev", getOption("repos")))
 ```
 
 ## Example
