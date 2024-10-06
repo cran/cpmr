@@ -5,7 +5,8 @@ test_that("Default threshold method works", {
   result <- cpm(conmat, behav)
   expect_s3_class(result, "cpm")
   expect_snapshot_value(result$pred, style = "json2")
-  expect_null(result$edges)
+  expect_snapshot_value(result$edges, style = "json2")
+  expect_snapshot_value(result$params, style = "json2")
   expect_snapshot(result)
 })
 
@@ -16,7 +17,8 @@ test_that("`kfolds` works", {
   result <- cpm(conmat, behav, kfolds = 5)
   expect_s3_class(result, "cpm")
   expect_snapshot_value(result$pred, style = "json2")
-  expect_null(result$edges)
+  expect_snapshot_value(result$edges, style = "json2")
+  expect_snapshot_value(result$params, style = "json2")
   expect_snapshot(result)
 })
 
@@ -27,7 +29,8 @@ test_that("Alternative threshold method works", {
   result <- cpm(conmat, behav, thresh_method = "sparsity")
   expect_s3_class(result, "cpm")
   expect_snapshot_value(result$pred, style = "json2")
-  expect_null(result$edges)
+  expect_snapshot_value(result$edges, style = "json2")
+  expect_snapshot_value(result$params, style = "json2")
   expect_snapshot(result)
 })
 
@@ -38,7 +41,8 @@ test_that("Different threshold levels works", {
   result <- cpm(conmat, behav, thresh_level = 0.1)
   expect_s3_class(result, "cpm")
   expect_snapshot_value(result$pred, style = "json2")
-  expect_null(result$edges)
+  expect_snapshot_value(result$edges, style = "json2")
+  expect_snapshot_value(result$params, style = "json2")
   expect_snapshot(result)
 })
 
@@ -50,7 +54,8 @@ test_that("Works with confounds", {
   result <- cpm(conmat, behav, confounds = confounds)
   expect_s3_class(result, "cpm")
   expect_snapshot_value(result$pred, style = "json2", tolerance = 1e-6)
-  expect_null(result$edges)
+  expect_snapshot_value(result$edges, style = "json2")
+  expect_snapshot_value(result$params, style = "json2")
   expect_snapshot(result)
 })
 
@@ -68,10 +73,12 @@ test_that("`return_edges` argument works", {
   withr::local_seed(123)
   conmat <- matrix(rnorm(100), ncol = 10)
   behav <- rnorm(10)
+  result <- cpm(conmat, behav, return_edges = "none")
+  expect_null(result$edges)
+  expect_snapshot(result)
   result <- cpm(conmat, behav, return_edges = "all")
   expect_snapshot_value(result$edges, style = "json2")
-  result <- cpm(conmat, behav, return_edges = "sum")
-  expect_snapshot_value(result$edges, style = "json2")
+  expect_snapshot(result)
 })
 
 test_that("Support row/column matrix input of `behav` and `confounds`", {
@@ -111,4 +118,27 @@ test_that("Throw informative error if data checking not pass", {
     cpm(conmat, rnorm(10), confounds = matrix(rnorm(20), ncol = 1)),
     "Case numbers of `confounds` and `behav` must match."
   )
+})
+
+test_that("`na_action` argument works", {
+  withr::local_seed(123)
+  conmat <- matrix(rnorm(100), ncol = 10)
+  behav <- rnorm(10)
+  behav[1] <- NA
+  expect_error(cpm(conmat, behav), "Missing values found in `behav`")
+  result <- cpm(conmat, behav, na_action = "exclude")
+  expect_equal(sum(complete.cases(result$real)), 9)
+  expect_equal(sum(complete.cases(result$pred)), 9)
+  expect_snapshot(result)
+  confounds <- matrix(rnorm(10), ncol = 1)
+  confounds[2, 1] <- NA
+  result <- cpm(conmat, behav, confounds = confounds, na_action = "exclude")
+  expect_equal(sum(complete.cases(result$real)), sum(complete.cases(behav)))
+  expect_equal(sum(complete.cases(result$pred)), 8)
+  expect_snapshot(result)
+  conmat[1, 1] <- NA
+  result <- cpm(conmat, behav, confounds = confounds, na_action = "exclude")
+  expect_equal(sum(complete.cases(result$real)), sum(complete.cases(behav)))
+  expect_equal(sum(complete.cases(result$pred)), 8)
+  expect_snapshot(result)
 })

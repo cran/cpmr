@@ -1,3 +1,18 @@
+# cpmr 0.1.0
+
+## New features
+
+* Added `summary()` method to summarize the results of the CPM analysis (#8).
+* Added `tidy()` method to tidy the results of the CPM analysis (#10).
+* Support `na_action` argument in `cpm()` function to handle missing values in the input data (#2).
+
+## Enhancements
+
+* Added `params` to `cpm()` output to store the input arguments (#14).
+* Let `"sum"` be the default value for `return_edges` argument.
+* Let the first two dimensions of `edges` in the output be edges and networks, respectively.
+* Polish the print method of the `cpm` class.
+
 # cpmr 0.0.9
 
 ## New features

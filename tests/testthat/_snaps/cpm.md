@@ -28,10 +28,88 @@
 
 ---
 
+    {
+      "type": "double",
+      "attributes": {
+        "dim": {
+          "type": "integer",
+          "attributes": {},
+          "value": [10, 2]
+        },
+        "dimnames": {
+          "type": "list",
+          "attributes": {},
+          "value": [
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["pos", "neg"]
+            }
+          ]
+        }
+      },
+      "value": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+    }
+
+---
+
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["confounds", "thresh_method", "thresh_level", "kfolds", "bias_correct"]
+        }
+      },
+      "value": [
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [false]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["alpha"]
+        },
+        {
+          "type": "double",
+          "attributes": {},
+          "value": [0.01]
+        },
+        {
+          "type": "integer",
+          "attributes": {},
+          "value": [10]
+        },
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [true]
+        }
+      ]
+    }
+
+---
+
     Code
       result
     Output
-      CPM results based on leave-one-out cross validation.
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav)
+        Number of observations: 10
+          Complete cases: 10
+        Number of edges: 10
+        Parameters:
+          Confounds:        FALSE
+          Threshold method: alpha
+          Threshold level:  0.01
+          CV folds:         10
+          Bias correction:  TRUE
 
 # `kfolds` works
 
@@ -58,7 +136,75 @@
           ]
         }
       },
-      "value": [-0.19751643, -0.60963073, -0.45834504, -0.33241485, -0.33241485, -0.45834504, -0.34916862, -0.19751643, -0.34916862, -0.92500993, -0.19751643, -0.60963073, -0.45834504, -0.33241485, -0.33241485, -0.45834504, -0.34916862, -0.19751643, -0.34916862, -0.92500993, -0.19751643, -0.64179503, -0.45834504, -0.33241485, -0.33241485, -0.45834504, -0.34916862, -0.19751643, -0.34916862, -0.64179503]
+      "value": [-0.52088375, -0.49608397, -0.49608397, -0.40383885, -0.16736493, -0.39106847, -0.39106847, -0.16736493, -0.40383885, -0.52088375, -0.52088375, -0.49608397, -0.49608397, -0.40383885, -0.16736493, -0.39106847, -0.39106847, -0.16736493, -0.40383885, -0.52088375, -0.52088375, -0.49608397, -0.49608397, -0.40383885, -0.16736493, -0.39106847, -0.39106847, -0.16736493, -0.40383885, -0.52088375]
+    }
+
+---
+
+    {
+      "type": "double",
+      "attributes": {
+        "dim": {
+          "type": "integer",
+          "attributes": {},
+          "value": [10, 2]
+        },
+        "dimnames": {
+          "type": "list",
+          "attributes": {},
+          "value": [
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["pos", "neg"]
+            }
+          ]
+        }
+      },
+      "value": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    }
+
+---
+
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["confounds", "thresh_method", "thresh_level", "kfolds", "bias_correct"]
+        }
+      },
+      "value": [
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [false]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["alpha"]
+        },
+        {
+          "type": "double",
+          "attributes": {},
+          "value": [0.01]
+        },
+        {
+          "type": "double",
+          "attributes": {},
+          "value": [5]
+        },
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [true]
+        }
+      ]
     }
 
 ---
@@ -66,7 +212,17 @@
     Code
       result
     Output
-      CPM results based on 5-fold cross validation.
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, kfolds = 5)
+        Number of observations: 10
+          Complete cases: 10
+        Number of edges: 10
+        Parameters:
+          Confounds:        FALSE
+          Threshold method: alpha
+          Threshold level:  0.01
+          CV folds:         5
+          Bias correction:  TRUE
 
 # Alternative threshold method works
 
@@ -98,10 +254,88 @@
 
 ---
 
+    {
+      "type": "double",
+      "attributes": {
+        "dim": {
+          "type": "integer",
+          "attributes": {},
+          "value": [10, 2]
+        },
+        "dimnames": {
+          "type": "list",
+          "attributes": {},
+          "value": [
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["pos", "neg"]
+            }
+          ]
+        }
+      },
+      "value": [9, 9, 9, 1, 2, 9, 9, 9, 9, 0, 1, 1, 1, 9, 8, 1, 1, 1, 1, 10]
+    }
+
+---
+
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["confounds", "thresh_method", "thresh_level", "kfolds", "bias_correct"]
+        }
+      },
+      "value": [
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [false]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["sparsity"]
+        },
+        {
+          "type": "double",
+          "attributes": {},
+          "value": [0.01]
+        },
+        {
+          "type": "integer",
+          "attributes": {},
+          "value": [10]
+        },
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [true]
+        }
+      ]
+    }
+
+---
+
     Code
       result
     Output
-      CPM results based on leave-one-out cross validation.
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, thresh_method = "sparsity")
+        Number of observations: 10
+          Complete cases: 10
+        Number of edges: 10
+        Parameters:
+          Confounds:        FALSE
+          Threshold method: sparsity
+          Threshold level:  0.01
+          CV folds:         10
+          Bias correction:  TRUE
 
 # Different threshold levels works
 
@@ -133,10 +367,88 @@
 
 ---
 
+    {
+      "type": "double",
+      "attributes": {
+        "dim": {
+          "type": "integer",
+          "attributes": {},
+          "value": [10, 2]
+        },
+        "dimnames": {
+          "type": "list",
+          "attributes": {},
+          "value": [
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["pos", "neg"]
+            }
+          ]
+        }
+      },
+      "value": [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 10]
+    }
+
+---
+
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["confounds", "thresh_method", "thresh_level", "kfolds", "bias_correct"]
+        }
+      },
+      "value": [
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [false]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["alpha"]
+        },
+        {
+          "type": "double",
+          "attributes": {},
+          "value": [0.1]
+        },
+        {
+          "type": "integer",
+          "attributes": {},
+          "value": [10]
+        },
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [true]
+        }
+      ]
+    }
+
+---
+
     Code
       result
     Output
-      CPM results based on leave-one-out cross validation.
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, thresh_level = 0.1)
+        Number of observations: 10
+          Complete cases: 10
+        Number of edges: 10
+        Parameters:
+          Confounds:        FALSE
+          Threshold method: alpha
+          Threshold level:  0.10
+          CV folds:         10
+          Bias correction:  TRUE
 
 # Works with confounds
 
@@ -168,44 +480,6 @@
 
 ---
 
-    Code
-      result
-    Output
-      CPM results based on leave-one-out cross validation.
-
-# `return_edges` argument works
-
-    {
-      "type": "logical",
-      "attributes": {
-        "dim": {
-          "type": "integer",
-          "attributes": {},
-          "value": [10, 10, 2]
-        },
-        "dimnames": {
-          "type": "list",
-          "attributes": {},
-          "value": [
-            {
-              "type": "NULL"
-            },
-            {
-              "type": "NULL"
-            },
-            {
-              "type": "character",
-              "attributes": {},
-              "value": ["pos", "neg"]
-            }
-          ]
-        }
-      },
-      "value": [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false]
-    }
-
----
-
     {
       "type": "double",
       "attributes": {
@@ -231,4 +505,177 @@
       },
       "value": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
     }
+
+---
+
+    {
+      "type": "list",
+      "attributes": {
+        "names": {
+          "type": "character",
+          "attributes": {},
+          "value": ["confounds", "thresh_method", "thresh_level", "kfolds", "bias_correct"]
+        }
+      },
+      "value": [
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [true]
+        },
+        {
+          "type": "character",
+          "attributes": {},
+          "value": ["alpha"]
+        },
+        {
+          "type": "double",
+          "attributes": {},
+          "value": [0.01]
+        },
+        {
+          "type": "integer",
+          "attributes": {},
+          "value": [10]
+        },
+        {
+          "type": "logical",
+          "attributes": {},
+          "value": [true]
+        }
+      ]
+    }
+
+---
+
+    Code
+      result
+    Output
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, confounds = confounds)
+        Number of observations: 10
+          Complete cases: 10
+        Number of edges: 10
+        Parameters:
+          Confounds:        TRUE
+          Threshold method: alpha
+          Threshold level:  0.01
+          CV folds:         10
+          Bias correction:  TRUE
+
+# `return_edges` argument works
+
+    Code
+      result
+    Output
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, return_edges = "none")
+        Number of observations: 10
+          Complete cases: 10
+        Number of edges: unknown
+        Parameters:
+          Confounds:        FALSE
+          Threshold method: alpha
+          Threshold level:  0.01
+          CV folds:         10
+          Bias correction:  TRUE
+
+---
+
+    {
+      "type": "logical",
+      "attributes": {
+        "dim": {
+          "type": "integer",
+          "attributes": {},
+          "value": [10, 2, 10]
+        },
+        "dimnames": {
+          "type": "list",
+          "attributes": {},
+          "value": [
+            {
+              "type": "NULL"
+            },
+            {
+              "type": "character",
+              "attributes": {},
+              "value": ["pos", "neg"]
+            },
+            {
+              "type": "NULL"
+            }
+          ]
+        }
+      },
+      "value": [false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, true, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false, false]
+    }
+
+---
+
+    Code
+      result
+    Output
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, return_edges = "all")
+        Number of observations: 10
+          Complete cases: 10
+        Number of edges: 10
+        Parameters:
+          Confounds:        FALSE
+          Threshold method: alpha
+          Threshold level:  0.01
+          CV folds:         10
+          Bias correction:  TRUE
+
+# `na_action` argument works
+
+    Code
+      result
+    Output
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, na_action = "exclude")
+        Number of observations: 10
+          Complete cases: 9
+        Number of edges: 10
+        Parameters:
+          Confounds:        FALSE
+          Threshold method: alpha
+          Threshold level:  0.01
+          CV folds:         9
+          Bias correction:  TRUE
+
+---
+
+    Code
+      result
+    Output
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, confounds = confounds, na_action = "exclude")
+        Number of observations: 10
+          Complete cases: 8
+        Number of edges: 10
+        Parameters:
+          Confounds:        TRUE
+          Threshold method: alpha
+          Threshold level:  0.01
+          CV folds:         8
+          Bias correction:  TRUE
+
+---
+
+    Code
+      result
+    Output
+      CPM results:
+        Call: cpm(conmat = conmat, behav = behav, confounds = confounds, na_action = "exclude")
+        Number of observations: 10
+          Complete cases: 8
+        Number of edges: 10
+        Parameters:
+          Confounds:        TRUE
+          Threshold method: alpha
+          Threshold level:  0.01
+          CV folds:         8
+          Bias correction:  TRUE
 

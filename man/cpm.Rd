@@ -13,7 +13,8 @@ cpm(
   thresh_level = 0.01,
   kfolds = NULL,
   bias_correct = TRUE,
-  return_edges = c("none", "sum", "all")
+  return_edges = c("sum", "none", "all"),
+  na_action = c("fail", "exclude")
 )
 }
 \arguments{
@@ -48,6 +49,12 @@ prediction. See Rapuano et al. (2020) for more details.}
 selected edges. If \code{"none"}, no edges are returned. If \code{"sum"}, the sum of
 selected edges across folds is returned. If \code{"all"}, the selected edges for
 each fold is returned, which is a 3D array and memory-consuming.}
+
+\item{na_action}{A character string indicating the action when missing values
+are found in \code{behav}. If \code{"fail"}, an error will be thrown. If \code{"exclude"},
+missing values will be excluded from the analysis but kept in the output.
+Note complete cases are intersection of \code{conmat}, \code{behav} and \code{confounds}
+if provided.}
 }
 \value{
 A list with the following components:
@@ -67,8 +74,19 @@ names corresponding to the observation names (the same as those of
 \item{edges}{The selected edges, if \code{return_edges} is not \code{"none"}. If
 \code{return_edges} is \code{"sum"}, it is a matrix with rows corresponding to
 edges and columns corresponding to networks. If \code{return_edges} is
-\code{"all"}, it is a 3D array with dimensions corresponding to folds, edges,
-and networks.}
+\code{"all"}, it is a 3D array with dimensions corresponding to edges,
+networks and folds.}
+
+\item{call}{The matched call.}
+
+\item{params}{A list of parameters used in the function, including:
+\itemize{
+\item \code{confounds} indicating if confounds are used
+\item \code{thresh_method} indicating the threshold method
+\item \code{thresh_level} indicating the threshold level
+\item \code{kfolds} indicating the number of folds in cross-validation
+\item \code{bias_correct} indicating if bias correction is used}
+}
 }
 \description{
 The connectome-based predictive modeling (CPM) is a data-driven approach to

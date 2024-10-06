@@ -38,6 +38,11 @@
 #'   selected edges. If `"none"`, no edges are returned. If `"sum"`, the sum of
 #'   selected edges across folds is returned. If `"all"`, the selected edges for
 #'   each fold is returned, which is a 3D array and memory-consuming.
+#' @param na_action A character string indicating the action when missing values
+#'   are found in `behav`. If `"fail"`, an error will be thrown. If `"exclude"`,
+#'   missing values will be excluded from the analysis but kept in the output.
+#'   Note complete cases are intersection of `conmat`, `behav` and `confounds`
+#'   if provided.
 #' @return A list with the following components:
 #'
 #'   \item{folds}{The corresponding fold for each observation when used as test
@@ -55,8 +60,22 @@
 #'   \item{edges}{The selected edges, if `return_edges` is not `"none"`. If
 #'     `return_edges` is `"sum"`, it is a matrix with rows corresponding to
 #'     edges and columns corresponding to networks. If `return_edges` is
-#'     `"all"`, it is a 3D array with dimensions corresponding to folds, edges,
-#'     and networks.}
+#'     `"all"`, it is a 3D array with dimensions corresponding to edges,
+#'     networks and folds.}
+#'
+#'   \item{call}{The matched call.}
+#'
+#'   \item{params}{A list of parameters used in the function, including:
+#'
+#'   * `confounds` indicating if confounds are used
+#'
+#'   * `thresh_method` indicating the threshold method
+#'
+#'   * `thresh_level` indicating the threshold level
+#'
+#'   * `kfolds` indicating the number of folds in cross-validation
+#'
+#'   * `bias_correct` indicating if bias correction is used}
 #' @references
 #'
 #' Shen, X., Finn, E. S., Scheinost, D., Rosenberg, M. D., Chun, M. M.,
@@ -76,12 +95,15 @@ cpm <- function(conmat, behav, ...,
                 thresh_level = 0.01,
                 kfolds = NULL,
                 bias_correct = TRUE,
-                return_edges = c("none", "sum", "all")) {
+                return_edges = c("sum", "none", "all"),
+                na_action = c("fail", "exclude")) {
   call <- match.call()
   thresh_method <- match.arg(thresh_method)
   return_edges <- match.arg(return_edges)
-  # ensure `behav` is a vector
-  behav <- drop(behav)
+  na_action <- match.arg(na_action)
+
+  # check input data
+  behav <- drop(behav) # convert to vector
   if (!is.vector(behav) || !is.numeric(behav)) {
     stop("Behavior data must be a numeric vector.")
   }
@@ -95,17 +117,54 @@ cpm <- function(conmat, behav, ...,
       stop("Case numbers of `confounds` and `behav` must match.")
     }
     check_names(confounds, behav)
-    conmat <- regress_counfounds(conmat, confounds)
-    behav <- regress_counfounds(behav, confounds)
   }
-  # default to leave-one-subject-out
-  if (is.null(kfolds)) kfolds <- length(behav)
-  folds <- crossv_kfold(length(behav), kfolds)
+
+  # handle missing cases
+  include_cases <- switch(na_action,
+    fail = {
+      stopifnot(
+        "Missing values found in `conmat`" = !anyNA(conmat),
+        "Missing values found in `behav`" = !anyNA(behav),
+        "Missing values found in `confounds`" =
+          is.null(confounds) || !anyNA(confounds)
+      )
+      seq_along(behav)
+    },
+    exclude = Reduce(
+      function(x, y) intersect(x, y),
+      list(
+        which(stats::complete.cases(conmat)),
+        which(stats::complete.cases(behav)),
+        if (!is.null(confounds)) {
+          which(stats::complete.cases(confounds))
+        } else {
+          seq_along(behav)
+        }
+      )
+    )
+  )
+
+  # confounds regression
+  if (!is.null(confounds)) {
+    conmat[include_cases, ] <- regress_counfounds(
+      conmat[include_cases, , drop = FALSE],
+      confounds[include_cases, , drop = FALSE]
+    )
+    behav[include_cases] <- regress_counfounds(
+      behav[include_cases],
+      confounds[include_cases, , drop = FALSE]
+    )
+  }
+
+  # prepare for cross-validation
+  if (is.null(kfolds)) kfolds <- length(include_cases) # default to LOOCV
+  folds <- crossv_kfold(include_cases, kfolds)
+
   # pre-allocation
   edges <- switch(return_edges,
     all = array(
-      dim = c(kfolds, dim(conmat)[2], length(networks)),
-      dimnames = list(NULL, NULL, networks)
+      dim = c(dim(conmat)[2], length(networks), kfolds),
+      dimnames = list(NULL, networks, NULL)
     ),
     sum = array(
       0,
@@ -118,22 +177,25 @@ cpm <- function(conmat, behav, ...,
     ncol = length(includes),
     dimnames = list(names(behav), includes)
   )
+
+  # process each fold of CPM
   for (fold in seq_len(kfolds)) {
-    rows_train <- folds != fold
+    rows_test <- folds[[fold]]
+    rows_train <- setdiff(include_cases, rows_test)
     conmat_train <- conmat[rows_train, , drop = FALSE]
     behav_train <- behav[rows_train]
     cur_edges <- select_edges(
       conmat_train, behav_train,
       thresh_method, thresh_level
     )
-    conmat_test <- conmat[!rows_train, , drop = FALSE]
+    conmat_test <- conmat[rows_test, , drop = FALSE]
     cur_pred <- predict_cpm(
       conmat_train, behav_train, conmat_test,
       cur_edges, bias_correct
     )
-    pred[!rows_train, ] <- cur_pred
+    pred[rows_test, ] <- cur_pred
     if (return_edges == "all") {
-      edges[fold, , ] <- cur_edges
+      edges[, , fold] <- cur_edges
     } else if (return_edges == "sum") {
       edges <- edges + cur_edges
     }
@@ -144,7 +206,14 @@ cpm <- function(conmat, behav, ...,
       real = behav,
       pred = pred,
       edges = edges,
-      call = call
+      call = call,
+      params = list(
+        confounds = !is.null(confounds),
+        thresh_method = thresh_method,
+        thresh_level = thresh_level,
+        kfolds = kfolds,
+        bias_correct = bias_correct
+      )
     ),
     class = "cpm"
   )
@@ -152,12 +221,22 @@ cpm <- function(conmat, behav, ...,
 
 #' @export
 print.cpm <- function(x, ...) {
-  cv <- if (length(unique(x$folds)) == length(x$real)) {
-    "leave-one-out"
+  cat("CPM results:\n")
+  cat("  Call: ")
+  print(x$call)
+  cat(sprintf("  Number of observations: %d\n", length(x$real)))
+  cat(sprintf("    Complete cases: %d\n", sum(stats::complete.cases(x$pred))))
+  if (!is.null(x$edges)) {
+    cat(sprintf("  Number of edges: %d\n", dim(x$edges)[1]))
   } else {
-    sprintf("%d-fold", length(unique(x$folds)))
+    cat("  Number of edges: unknown\n")
   }
-  cat(sprintf("CPM results based on %s cross validation.\n", cv))
+  cat("  Parameters:\n")
+  cat(sprintf("    Confounds:        %s\n", x$params$confounds))
+  cat(sprintf("    Threshold method: %s\n", x$params$thresh_method))
+  cat(sprintf("    Threshold level:  %.2f\n", x$params$thresh_level))
+  cat(sprintf("    CV folds:         %d\n", x$params$kfolds))
+  cat(sprintf("    Bias correction:  %s\n", x$params$bias_correct))
   invisible(x)
 }
 
@@ -256,8 +335,8 @@ critical_r <- function(n, alpha) {
   sqrt((ct^2) / ((ct^2) + df))
 }
 
-crossv_kfold <- function(n, k) {
-  sample(cut(seq_len(n), breaks = k, labels = FALSE))
+crossv_kfold <- function(x, k) {
+  split(sample(x), cut(seq_along(x), breaks = k, labels = FALSE))
 }
 
 fscale <- function(x, center, scale) {
