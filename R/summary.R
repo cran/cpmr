@@ -20,18 +20,22 @@
 #'
 #'   \item{params}{A list of parameters used in the summary.}
 #' @export
-summary.cpm <- function(object, ...,
-                        method = c("pearson", "spearman"),
-                        edge_level = 0.5) {
+summary.cpm <- function(
+  object,
+  ...,
+  method = c("pearson", "spearman"),
+  edge_level = 0.5
+) {
   method <- match.arg(method)
   # summary prediction performance
   performance <- stats::cor(object$real, object$pred, method = method)
   # summary edge selection
   edges <- if (!is.null(object$edges)) {
+    edges_count <- object$edges
     if (length(dim(object$edges)) == 3) {
-      object$edges <- apply(object$edges, 1:2, sum)
+      edges_count <- apply(object$edges, 1:2, sum)
     }
-    object$edges > edge_level * length(unique(object$folds))
+    edges_count > edge_level * length(unique(object$folds))
   }
   structure(
     list(

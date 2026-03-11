@@ -59,9 +59,9 @@
 #'
 #'   \item{edges}{The selected edges, if `return_edges` is not `"none"`. If
 #'     `return_edges` is `"sum"`, it is a matrix with rows corresponding to
-#'     edges and columns corresponding to networks. If `return_edges` is
-#'     `"all"`, it is a 3D array with dimensions corresponding to edges,
-#'     networks and folds.}
+#'     edges and columns corresponding to correlation types (i.e., `"pos"` and
+#'     `"neg"`). If `return_edges` is `"all"`, it is a 3D array with dimensions
+#'     corresponding to edges, correlation types and folds.}
 #'
 #'   \item{call}{The matched call.}
 #'
@@ -89,133 +89,62 @@
 #' childhood. Developmental Cognitive Neuroscience, 46, 100878.
 #' https://doi.org/10.1016/j.dcn.2020.100878
 #' @export
-cpm <- function(conmat, behav, ...,
-                confounds = NULL,
-                thresh_method = c("alpha", "sparsity"),
-                thresh_level = 0.01,
-                kfolds = NULL,
-                bias_correct = TRUE,
-                return_edges = c("sum", "none", "all"),
-                na_action = c("fail", "exclude")) {
+cpm <- function(
+  conmat,
+  behav,
+  ...,
+  confounds = NULL,
+  thresh_method = c("alpha", "sparsity"),
+  thresh_level = 0.01,
+  kfolds = NULL,
+  bias_correct = TRUE,
+  return_edges = c("sum", "none", "all"),
+  na_action = c("fail", "exclude")
+) {
   call <- match.call()
   thresh_method <- match.arg(thresh_method)
   return_edges <- match.arg(return_edges)
   na_action <- match.arg(na_action)
 
-  # check input data
-  behav <- drop(behav) # convert to vector
-  if (!is.vector(behav) || !is.numeric(behav)) {
-    stop("Behavior data must be a numeric vector.")
-  }
-  if (nrow(conmat) != length(behav)) {
-    stop("Case numbers of `conmat` and `behav` must match.")
-  }
-  check_names(conmat, behav)
-  if (!is.null(confounds)) {
-    if (is.vector(confounds)) confounds <- as.matrix(confounds)
-    if (nrow(confounds) != length(behav)) {
-      stop("Case numbers of `confounds` and `behav` must match.")
-    }
-    check_names(confounds, behav)
-  }
+  normalized <- normalize_inputs(conmat, behav, confounds)
+  behav <- normalized$behav
+  confounds <- normalized$confounds
 
-  # handle missing cases
-  include_cases <- switch(na_action,
-    fail = {
-      stopifnot(
-        "Missing values found in `conmat`" = !anyNA(conmat),
-        "Missing values found in `behav`" = !anyNA(behav),
-        "Missing values found in `confounds`" =
-          is.null(confounds) || !anyNA(confounds)
-      )
-      seq_along(behav)
-    },
-    exclude = Reduce(
-      function(x, y) intersect(x, y),
-      list(
-        which(stats::complete.cases(conmat)),
-        which(stats::complete.cases(behav)),
-        if (!is.null(confounds)) {
-          which(stats::complete.cases(confounds))
-        } else {
-          seq_along(behav)
-        }
-      )
-    )
-  )
+  include_cases <- resolve_include_cases(conmat, behav, confounds, na_action)
+  regressed <- apply_confounds_regression(conmat, behav, confounds, include_cases)
+  conmat <- regressed$conmat
+  behav <- regressed$behav
 
-  # confounds regression
-  if (!is.null(confounds)) {
-    conmat[include_cases, ] <- regress_counfounds(
-      conmat[include_cases, , drop = FALSE],
-      confounds[include_cases, , drop = FALSE]
-    )
-    behav[include_cases] <- regress_counfounds(
-      behav[include_cases],
-      confounds[include_cases, , drop = FALSE]
-    )
-  }
-
-  # prepare for cross-validation
-  if (is.null(kfolds)) kfolds <- length(include_cases) # default to LOOCV
+  kfolds <- resolve_kfolds(kfolds, include_cases)
   folds <- crossv_kfold(include_cases, kfolds)
-
-  # pre-allocation
-  edges <- switch(return_edges,
-    all = array(
-      dim = c(dim(conmat)[2], length(networks), kfolds),
-      dimnames = list(NULL, networks, NULL)
-    ),
-    sum = array(
-      0,
-      dim = c(dim(conmat)[2], length(networks)),
-      dimnames = list(NULL, networks)
-    )
-  )
-  pred <- matrix(
-    nrow = length(behav),
-    ncol = length(includes),
-    dimnames = list(names(behav), includes)
+  edges <- init_edges(return_edges, conmat, kfolds)
+  pred <- init_pred(behav)
+  cv_result <- fit_predict_cv(
+    conmat,
+    behav,
+    include_cases,
+    folds,
+    thresh_method,
+    thresh_level,
+    bias_correct,
+    return_edges,
+    pred,
+    edges
   )
 
-  # process each fold of CPM
-  for (fold in seq_len(kfolds)) {
-    rows_test <- folds[[fold]]
-    rows_train <- setdiff(include_cases, rows_test)
-    conmat_train <- conmat[rows_train, , drop = FALSE]
-    behav_train <- behav[rows_train]
-    cur_edges <- select_edges(
-      conmat_train, behav_train,
-      thresh_method, thresh_level
+  compose_cpm(
+    call = call,
+    folds = folds,
+    behav = behav,
+    pred = cv_result$pred,
+    edges = cv_result$edges,
+    params = list(
+      confounds = !is.null(confounds),
+      thresh_method = thresh_method,
+      thresh_level = thresh_level,
+      kfolds = kfolds,
+      bias_correct = bias_correct
     )
-    conmat_test <- conmat[rows_test, , drop = FALSE]
-    cur_pred <- predict_cpm(
-      conmat_train, behav_train, conmat_test,
-      cur_edges, bias_correct
-    )
-    pred[rows_test, ] <- cur_pred
-    if (return_edges == "all") {
-      edges[, , fold] <- cur_edges
-    } else if (return_edges == "sum") {
-      edges <- edges + cur_edges
-    }
-  }
-  structure(
-    list(
-      folds = folds,
-      real = behav,
-      pred = pred,
-      edges = edges,
-      call = call,
-      params = list(
-        confounds = !is.null(confounds),
-        thresh_method = thresh_method,
-        thresh_level = thresh_level,
-        kfolds = kfolds,
-        bias_correct = bias_correct
-      )
-    ),
-    class = "cpm"
   )
 }
 
@@ -240,105 +169,159 @@ print.cpm <- function(x, ...) {
   invisible(x)
 }
 
-# helper functions
-check_names <- function(data, behav) {
-  if (!is.null(rownames(data)) && !is.null(names(behav))) {
-    if (!identical(rownames(data), names(behav))) {
-      stop(
-        sprintf(
-          "Case names of `%s` must match those of behavior data.",
-          deparse1(substitute(data))
-        )
-      )
-    }
+normalize_inputs <- function(conmat, behav, confounds) {
+  behav <- drop(behav)
+  if (!is.vector(behav) || !is.numeric(behav)) {
+    stop("Behavior data must be a numeric vector.")
   }
-  invisible()
+  if (nrow(conmat) != length(behav)) {
+    stop("Case numbers of `conmat` and `behav` must match.")
+  }
+  check_names(conmat, behav)
+
+  if (!is.null(confounds)) {
+    if (is.vector(confounds)) {
+      confounds <- as.matrix(confounds)
+    }
+    if (nrow(confounds) != length(behav)) {
+      stop("Case numbers of `confounds` and `behav` must match.")
+    }
+    check_names(confounds, behav)
+  }
+
+  list(
+    behav = behav,
+    confounds = confounds
+  )
 }
 
-select_edges <- function(conmat, behav, method, level) {
-  r_mat <- stats::cor(conmat, behav)
-  r_crit <- switch(method,
-    alpha = {
-      thresh <- critical_r(nrow(conmat), level)
-      c(-thresh, thresh)
-    },
-    sparsity = {
-      k <- round(level * length(r_mat))
-      thresh <- c(
-        nth(r_mat, k),
-        nth(r_mat, k, descending = TRUE)
+resolve_include_cases <- function(conmat, behav, confounds, na_action) {
+  switch(
+    na_action,
+    fail = {
+      stopifnot(
+        "Missing values found in `conmat`" = !anyNA(conmat),
+        "Missing values found in `behav`" = !anyNA(behav),
+        "Missing values found in `confounds`" = is.null(confounds) ||
+          !anyNA(confounds)
       )
-      if (thresh[[1]] > 0 || thresh[[2]] < 0) {
-        warning("Not enough positive or negative correlation values.") # nocov
-      }
-      thresh
+      seq_along(behav)
     },
-    stop("Invalid threshold method.")
+    exclude = Reduce(
+      intersect,
+      list(
+        which(stats::complete.cases(conmat)),
+        which(stats::complete.cases(behav)),
+        if (!is.null(confounds)) {
+          which(stats::complete.cases(confounds))
+        } else {
+          seq_along(behav)
+        }
+      )
+    )
   )
+}
+
+apply_confounds_regression <- function(conmat, behav, confounds, include_cases) {
+  if (is.null(confounds)) {
+    return(list(conmat = conmat, behav = behav))
+  }
+
+  conmat[include_cases, ] <- regress_confounds(
+    conmat[include_cases, , drop = FALSE],
+    confounds[include_cases, , drop = FALSE]
+  )
+  behav[include_cases] <- regress_confounds(
+    behav[include_cases],
+    confounds[include_cases, , drop = FALSE]
+  )
+
+  list(conmat = conmat, behav = behav)
+}
+
+resolve_kfolds <- function(kfolds, include_cases) {
+  if (is.null(kfolds)) {
+    return(length(include_cases))
+  }
+  kfolds
+}
+
+init_edges <- function(return_edges, conmat, kfolds) {
+  switch(
+    return_edges,
+    all = array(
+      dim = c(dim(conmat)[2], length(corr_types), kfolds),
+      dimnames = list(NULL, corr_types, NULL)
+    ),
+    sum = array(
+      0,
+      dim = c(dim(conmat)[2], length(corr_types)),
+      dimnames = list(NULL, corr_types)
+    )
+  )
+}
+
+init_pred <- function(behav) {
   matrix(
-    c(r_mat >= r_crit[2], r_mat <= r_crit[1]),
-    ncol = 2,
-    dimnames = list(NULL, networks)
+    nrow = length(behav),
+    ncol = length(inc_edges),
+    dimnames = list(names(behav), inc_edges)
   )
 }
 
-predict_cpm <- function(conmat, behav, conmat_new, edges, bias_correct) {
-  if (bias_correct) {
-    center <- colmeans(conmat)
-    scale <- colVars(conmat, std = TRUE)
-    conmat <- fscale(conmat, center, scale)
-    conmat_new <- fscale(conmat_new, center, scale)
-  }
-  allocate_predictors <- function(nrow) {
-    matrix(
-      1,
-      nrow = nrow, ncol = length(networks) + 1,
-      dimnames = list(NULL, c("(Intercept)", networks))
+fit_predict_cv <- function(
+    conmat,
+    behav,
+    include_cases,
+    folds,
+    thresh_method,
+    thresh_level,
+    bias_correct,
+    return_edges,
+    pred,
+    edges
+) {
+  kfolds <- length(folds)
+  for (fold in seq_len(kfolds)) {
+    rows_test <- folds[[fold]]
+    rows_train <- setdiff(include_cases, rows_test)
+    conmat_train <- conmat[rows_train, , drop = FALSE]
+    behav_train <- behav[rows_train]
+    cur_edges <- select_edges(
+      conmat_train,
+      behav_train,
+      thresh_method,
+      thresh_level
     )
-  }
-  x <- allocate_predictors(dim(conmat)[1])
-  x_new <- allocate_predictors(dim(conmat_new)[1])
-  for (network in networks) {
-    x[, network] <- rowsums(
-      conmat[, edges[, network], drop = FALSE]
+    conmat_test <- conmat[rows_test, , drop = FALSE]
+    cur_pred <- predict_cpm(
+      conmat_train,
+      behav_train,
+      conmat_test,
+      cur_edges,
+      bias_correct
     )
-    x_new[, network] <- rowsums(
-      conmat_new[, edges[, network], drop = FALSE]
-    )
-  }
-  pred <- matrix(
-    nrow = dim(conmat_new)[1],
-    ncol = length(includes),
-    dimnames = list(NULL, includes)
-  )
-  for (include in includes) {
-    if (include == "both") {
-      cur_x <- x
-      cur_x_new <- x_new
-    } else {
-      cur_x <- x[, c("(Intercept)", include)]
-      cur_x_new <- x_new[, c("(Intercept)", include)]
+    pred[rows_test, ] <- cur_pred
+    if (return_edges == "all") {
+      edges[, , fold] <- cur_edges
+    } else if (return_edges == "sum") {
+      edges <- edges + cur_edges
     }
-    model <- stats::.lm.fit(cur_x, behav)
-    pred[, include] <- cur_x_new %*% model$coefficients
   }
-  pred
+
+  list(pred = pred, edges = edges)
 }
 
-regress_counfounds <- function(resp, confounds) {
-  stats::.lm.fit(cbind(1, confounds), resp)$residuals
-}
-
-critical_r <- function(n, alpha) {
-  df <- n - 2
-  ct <- stats::qt(alpha / 2, df, lower.tail = FALSE)
-  sqrt((ct^2) / ((ct^2) + df))
-}
-
-crossv_kfold <- function(x, k) {
-  split(sample(x), cut(seq_along(x), breaks = k, labels = FALSE))
-}
-
-fscale <- function(x, center, scale) {
-  eachrow(eachrow(x, center, "-"), scale, "/")
+compose_cpm <- function(call, folds, behav, pred, edges, params) {
+  structure(
+    list(
+      folds = folds,
+      real = behav,
+      pred = pred,
+      edges = edges,
+      call = call,
+      params = params
+    ),
+    class = "cpm"
+  )
 }
